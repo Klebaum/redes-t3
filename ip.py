@@ -26,18 +26,27 @@ class IP:
             # atua como roteador
             next_hop = self._next_hop(dst_addr)
             # TODO: Trate corretamente o campo TTL do datagrama
-            self.enlace.enviar(datagrama, next_hop)
+            ttl -= 1
+            tam = 20+len(payload)
+            if ttl != 0:
+                checksum = calc_checksum(struct.pack('!BBHHHBBH', 69, 0, tam, self.id, 0, ttl, 6, 0) + str2addr(src_addr) + str2addr(dst_addr))
+                datagrama = struct.pack('!BBHHHBBH', 69, 0, tam, self.id, 0, ttl, 6, checksum) + str2addr(src_addr) + str2addr(dst_addr) + payload
+                self.enlace.enviar(datagrama, next_hop)
+            else:
+                return
 
     def _next_hop(self, dest_addr):
         # TODO: Use a tabela de encaminhamento para determinar o próximo salto
         # (next_hop) a partir do endereço de destino do datagrama (dest_addr).
         # Retorne o next_hop para o dest_addr fornecido.
         aux = 0
-        hop = 0
+        hop = None
         for i in self.tabela:
             if(ip_address(dest_addr) in ip_network(i[0])):
-                return i[1]
-        return None
+                if(int(i[0].split("/")[1]) >= aux):
+                    aux = int(i[0].split("/")[1])
+                    hop = i[1]
+        return hop
 
     def definir_endereco_host(self, meu_endereco):
         """
